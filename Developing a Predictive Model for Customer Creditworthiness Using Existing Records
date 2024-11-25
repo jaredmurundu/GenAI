@@ -1,0 +1,79 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
+import seaborn as sns
+import matplotlib.pyplot as plt
+#Load Datasets
+
+
+# Load dataset
+url = "https://archive.ics.uci.edu/ml/machine-learning-databases/statlog/german/german.data"
+columns = ['Status', 'Duration', 'CreditHistory', 'Purpose', 'CreditAmount', 'Savings',
+           'Employment', 'InstallmentRate', 'PersonalStatus', 'OtherDebtors', 'ResidenceSince',
+           'Property', 'Age', 'OtherInstallments', 'Housing', 'ExistingCredits', 'Job',
+           'NumberDependents', 'Telephone', 'ForeignWorker', 'Target']
+data = pd.read_csv(url, delimiter=' ', header=None, names=columns)
+
+# Binary target: 1 = creditworthy, 2 = not creditworthy
+data['Target'] = data['Target'].map({1: 1, 2: 0})
+
+
+#Data Processing 
+# Check for missing values
+print(data.isnull().sum())
+
+# Select features and target variable
+X = data.drop(columns=['Target'])
+y = data['Target']
+
+# One-hot encode categorical variables
+X = pd.get_dummies(X, drop_first=True)
+
+# Split data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Standardize numeric features
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+#Training the Model
+# Train a Random Forest Classifier
+model = RandomForestClassifier(random_state=42, n_estimators=100)
+model.fit(X_train, y_train)
+
+
+#Evaluating the Model
+# Make predictions
+y_pred = model.predict(X_test)
+
+# Evaluation metrics
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy:", accuracy)
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
+
+# Confusion matrix
+conf_matrix = confusion_matrix(y_test, y_pred)
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues')
+plt.title("Confusion Matrix")
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.show()
+
+#The feature importance 
+# Feature importance visualization
+feature_importances = pd.DataFrame({'Feature': X.columns, 'Importance': model.feature_importances_})
+feature_importances = feature_importances.sort_values(by='Importance', ascending=False)
+sns.barplot(x='Importance', y='Feature', data=feature_importances)
+plt.title("Feature Importance")
+plt.show()
+
+#Model usage (saving and deployment)
+import joblib
+# Save the trained model
+joblib.dump(model, 'creditworthiness_model.pkl')
+# Load the model (when needed)
+loaded_model = joblib.load('creditworthiness_model.pkl')
